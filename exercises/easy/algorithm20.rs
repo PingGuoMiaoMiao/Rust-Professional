@@ -10,10 +10,25 @@
 use std::fmt::{self, Display, Formatter};
 
 pub fn get_sum(a: i32, b: i32) -> i32 {
-    // TODO: Implement the logic to calculate the sum of two integers without using `+`
-    0 // Placeholder return value
+    let mut sum = 0;
+    let mut carry;
+ 
+    loop {
+        // Sum bits without considering carry
+        sum = a ^ b;
+        // Carry is formed by ANDing bits of a and b and left shifting by one
+        carry = (a & b) << 1;
+        // If carry is zero, we are done
+        if carry == 0 {
+            break;
+        }
+        // Update a and b for next iteration
+        a = sum;
+        b = carry;
+    }
+ 
+    sum
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
