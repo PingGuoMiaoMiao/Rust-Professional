@@ -1,19 +1,19 @@
-/*
-    Find Intersection of Two Arrays
-    Given two arrays, find the intersection of the arrays and return the elements of the intersection (without duplicates).
-    The result should not contain any duplicate elements.
-
-    You need to implement the function `intersection(nums1: Vec<i32>, nums2: Vec<i32>) -> Vec<i32>`.
-    The function should return a vector containing all the elements that are in both arrays.
-
-    Hint: You can solve this problem using sorting, hash sets, or the two-pointer technique.
-*/
-
-use std::fmt::{self, Display, Formatter};
+use std::collections::HashSet;
 
 pub fn intersection(nums1: Vec<i32>, nums2: Vec<i32>) -> Vec<i32> {
-    // TODO: Implement the logic to find the intersection of two arrays
-    Vec::new() // Placeholder return value
+    // 将 nums1 的元素存入哈希集合
+    let set: HashSet<_> = nums1.into_iter().collect();
+    let mut result = HashSet::new();
+
+    // 遍历 nums2，检查是否存在于 set 中
+    for num in nums2 {
+        if set.contains(&num) {
+            result.insert(num);
+        }
+    }
+
+    // 将结果集转换为向量
+    result.into_iter().collect()
 }
 
 #[cfg(test)]
