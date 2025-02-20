@@ -1,110 +1,80 @@
-use std::collections::{HashMap, HashSet};
-use std::fmt;
+use std::collections::HashSet;
 
-#[derive(Debug, Clone)]
-pub struct NodeNotInGraph;
-
-impl fmt::Display for NodeNotInGraph {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "accessing a node that is not in the graph")
-    }
+struct Graph {
+    adj: Vec<Vec<usize>>, 
 }
 
-pub struct UndirectedGraph {
-    adjacency_table: HashMap<String, Vec<(String, i32)>>,
-}
-
-impl Graph for UndirectedGraph {
-    fn new() -> UndirectedGraph {
-        UndirectedGraph {
-            adjacency_table: HashMap::new(),
+impl Graph {
+    fn new(n: usize) -> Self {
+        Graph {
+            adj: vec![vec![]; n],
         }
     }
 
-    fn adjacency_table_mutable(&mut self) -> &mut HashMap<String, Vec<(String, i32)>> {
-        &mut self.adjacency_table
+    fn add_edge(&mut self, src: usize, dest: usize) {
+        self.adj[src].push(dest);
+        self.adj[dest].push(src); 
     }
 
-    fn adjacency_table(&self) -> &HashMap<String, Vec<(String, i32)>> {
-        &self.adjacency_table
-    }
+    fn dfs_util(&self, v: usize, visited: &mut HashSet<usize>, visit_order: &mut Vec<usize>) {
+        // Mark the current node as visited and add it to the visit order
+        visited.insert(v);
+        visit_order.push(v);
 
-    fn add_edge(&mut self, edge: (&str, &str, i32)) {
-        let (node1, node2, weight) = edge;
-        self.add_node(node1);
-        self.add_node(node2);
-
-        // 添加 node1 -> node2 的边
-        self.adjacency_table_mutable()
-            .entry(node1.to_string())
-            .and_modify(|neighbours| neighbours.push((node2.to_string(), weight)));
-
-        // 添加 node2 -> node1 的边
-        self.adjacency_table_mutable()
-            .entry(node2.to_string())
-            .and_modify(|neighbours| neighbours.push((node1.to_string(), weight)));
-    }
-}
-
-pub trait Graph {
-    fn new() -> Self;
-    fn adjacency_table_mutable(&mut self) -> &mut HashMap<String, Vec<(String, i32)>>;
-    fn adjacency_table(&self) -> &HashMap<String, Vec<(String, i32)>>;
-
-    fn add_node(&mut self, node: &str) -> bool {
-        if !self.contains(node) {
-            self.adjacency_table_mutable()
-                .insert(node.to_string(), Vec::new());
-            true
-        } else {
-            false
-        }
-    }
-
-    fn add_edge(&mut self, edge: (&str, &str, i32));
-
-    fn contains(&self, node: &str) -> bool {
-        self.adjacency_table().get(node).is_some()
-    }
-
-    fn nodes(&self) -> HashSet<&String> {
-        self.adjacency_table().keys().collect()
-    }
-
-    fn edges(&self) -> Vec<(&String, &String, i32)> {
-        let mut edges = Vec::new();
-        for (from_node, from_node_neighbours) in self.adjacency_table() {
-            for (to_node, weight) in from_node_neighbours {
-                edges.push((from_node, to_node, *weight));
+        // Recur for all adjacent vertices
+        for &adj_node in &self.adj[v] {
+            if !visited.contains(&adj_node) {
+                self.dfs_util(adj_node, visited, visit_order);
             }
         }
-        edges
+    }
+
+    // Perform a depth-first search on the graph, return the order of visited nodes
+    fn dfs(&self, start: usize) -> Vec<usize> {
+        let mut visited = HashSet::new();
+        let mut visit_order = Vec::new(); 
+        self.dfs_util(start, &mut visited, &mut visit_order);
+        visit_order
     }
 }
 
 #[cfg(test)]
-mod test_undirected_graph {
-    use super::Graph;
-    use super::UndirectedGraph;
+mod tests {
+    use super::*;
 
     #[test]
-    fn test_add_edge() {
-        let mut graph = UndirectedGraph::new();
-        graph.add_edge(("a", "b", 5));
-        graph.add_edge(("b", "c", 10));
-        graph.add_edge(("c", "a", 7));
+    fn test_dfs_simple() {
+        let mut graph = Graph::new(3);
+        graph.add_edge(0, 1);
+        graph.add_edge(1, 2);
 
-        let expected_edges = [
-            (&String::from("a"), &String::from("b"), 5),
-            (&String::from("b"), &String::from("a"), 5),
-            (&String::from("c"), &String::from("a"), 7),
-            (&String::from("a"), &String::from("c"), 7),
-            (&String::from("b"), &String::from("c"), 10),
-            (&String::from("c"), &String::from("b"), 10),
-        ];
+        let visit_order = graph.dfs(0);
+        assert_eq!(visit_order, vec![0, 1, 2]);
+    }
 
-        for edge in expected_edges.iter() {
-            assert!(graph.edges().contains(edge));
-        }
+    #[test]
+    fn test_dfs_with_cycle() {
+        let mut graph = Graph::new(4);
+        graph.add_edge(0, 1);
+        graph.add_edge(0, 2);
+        graph.add_edge(1, 2);
+        graph.add_edge(2, 3);
+        graph.add_edge(3, 3); 
+
+        let visit_order = graph.dfs(0);
+        assert_eq!(visit_order, vec![0, 1, 2, 3]);
+    }
+
+    #[test]
+    fn test_dfs_disconnected_graph() {
+        let mut graph = Graph::new(5);
+        graph.add_edge(0, 1);
+        graph.add_edge(0, 2);
+        graph.add_edge(3, 4); 
+
+        let visit_order = graph.dfs(0);
+        assert_eq!(visit_order, vec![0, 1, 2]); 
+        let visit_order_disconnected = graph.dfs(3);
+        assert_eq!(visit_order_disconnected, vec![3, 4]); 
     }
 }
