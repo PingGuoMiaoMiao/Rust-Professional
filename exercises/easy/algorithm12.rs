@@ -1,19 +1,24 @@
-/*
-    Palindrome Check
-    Given a string, check if it is a palindrome (i.e., it reads the same forward and backward).
-    The solution should ignore case differences and non-alphabetical characters.
-
-    You need to implement the function `is_palindrome(s: String) -> bool`.
-    The function should return `true` if the string is a palindrome, and `false` otherwise.
-    
-    Hint: Consider normalizing the string by converting it to lowercase and removing non-alphabetical characters before checking.
-*/
-
-use std::fmt::{self, Display, Formatter};
-
 pub fn is_palindrome(s: String) -> bool {
-    // TODO: Implement the logic to check if the string is a palindrome
-    false // Placeholder return value
+    // 预处理字符串：转换为小写并移除非字母字符
+    let normalized: String = s
+        .chars()
+        .filter(|c| c.is_ascii_alphabetic()) // 只保留字母字符
+        .map(|c| c.to_ascii_lowercase()) // 转换为小写
+        .collect();
+
+    // 双指针法检查回文
+    let mut left = 0;
+    let mut right = normalized.len() as isize - 1;
+
+    while left < right {
+        if normalized.chars().nth(left as usize).unwrap() != normalized.chars().nth(right as usize).unwrap() {
+            return false;
+        }
+        left += 1;
+        right -= 1;
+    }
+
+    true
 }
 
 #[cfg(test)]
