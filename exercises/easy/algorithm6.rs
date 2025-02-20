@@ -1,143 +1,97 @@
 #[derive(Debug)]
-struct Stack<T> {
-    size: usize,
-    data: Vec<T>,
+pub struct Queue<T> {
+    elements: Vec<T>,
 }
 
-impl<T> Stack<T> {
-    fn new() -> Self {
+impl<T> Queue<T> {
+    pub fn new() -> Queue<T> {
+        Queue {
+            elements: Vec::new(),
+        }
+    }
+
+    pub fn enqueue(&mut self, value: T) {
+        self.elements.push(value)
+    }
+
+    pub fn dequeue(&mut self) -> Result<T, &str> {
+        if !self.elements.is_empty() {
+            Ok(self.elements.remove(0))
+        } else {
+            Err("Queue is empty")
+        }
+    }
+
+    pub fn peek(&self) -> Result<&T, &str> {
+        match self.elements.first() {
+            Some(value) => Ok(value),
+            None => Err("Queue is empty"),
+        }
+    }
+
+    pub fn size(&self) -> usize {
+        self.elements.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.elements.is_empty()
+    }
+}
+
+impl<T> Default for Queue<T> {
+    fn default() -> Queue<T> {
+        Queue {
+            elements: Vec::new(),
+        }
+    }
+}
+
+pub struct MyStack<T> {
+    q1: Queue<T>,
+    q2: Queue<T>,
+}
+
+impl<T> MyStack<T> {
+    pub fn new() -> Self {
         Self {
-            size: 0,
-            data: Vec::new(),
+            q1: Queue::new(),
+            q2: Queue::new(),
         }
     }
 
-    fn is_empty(&self) -> bool {
-        self.size == 0
-    }
-
-    fn len(&self) -> usize {
-        self.size
-    }
-
-    fn clear(&mut self) {
-        self.size = 0;
-        self.data.clear();
-    }
-
-    fn push(&mut self, val: T) {
-        self.data.push(val);
-        self.size += 1;
-    }
-
-    fn pop(&mut self) -> Option<T> {
-        if self.is_empty() {
-            None
+    pub fn push(&mut self, elem: T) {
+        // 将新元素插入到非空队列中
+        if !self.q1.is_empty() {
+            self.q1.enqueue(elem);
         } else {
-            self.size -= 1;
-            self.data.pop()
+            self.q2.enqueue(elem);
         }
     }
 
-    fn peek(&self) -> Option<&T> {
-        if self.is_empty() {
-            None
+    pub fn pop(&mut self) -> Result<T, &str> {
+        // 找到非空队列
+        let (src, dst) = if !self.q1.is_empty() {
+            (&mut self.q1, &mut self.q2)
+        } else if !self.q2.is_empty() {
+            (&mut self.q2, &mut self.q1)
         } else {
-            self.data.get(self.size - 1)
-        }
-    }
+            return Err("Stack is empty");
+        };
 
-    fn peek_mut(&mut self) -> Option<&mut T> {
-        if self.is_empty() {
-            None
-        } else {
-            self.data.get_mut(self.size - 1)
-        }
-    }
-
-    fn into_iter(self) -> IntoIter<T> {
-        IntoIter(self)
-    }
-
-    fn iter(&self) -> Iter<T> {
-        Iter {
-            stack: self.data.iter().collect(),
-        }
-    }
-
-    fn iter_mut(&mut self) -> IterMut<T> {
-        IterMut {
-            stack: self.data.iter_mut().collect(),
-        }
-    }
-}
-
-struct IntoIter<T>(Stack<T>);
-
-impl<T: Clone> Iterator for IntoIter<T> {
-    type Item = T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if !self.0.is_empty() {
-            self.0.size -= 1;
-            self.0.data.pop()
-        } else {
-            None
-        }
-    }
-}
-
-struct Iter<'a, T: 'a> {
-    stack: Vec<&'a T>,
-}
-
-impl<'a, T> Iterator for Iter<'a, T> {
-    type Item = &'a T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.stack.pop()
-    }
-}
-
-struct IterMut<'a, T: 'a> {
-    stack: Vec<&'a mut T>,
-}
-
-impl<'a, T> Iterator for IterMut<'a, T> {
-    type Item = &'a mut T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.stack.pop()
-    }
-}
-
-fn bracket_match(bracket: &str) -> bool {
-    let mut stack = Stack::new();
-    let bracket_pairs = [('(', ')'), ('[', ']'), ('{', '}')];
-
-    for ch in bracket.chars() {
-        match ch {
-            // 如果是开括号，入栈
-            '(' | '[' | '{' => stack.push(ch),
-            // 如果是闭括号，检查是否匹配
-            ')' | ']' | '}' => {
-                if let Some(&opening) = stack.peek() {
-                    if let Some(&(_, close)) = bracket_pairs.iter().find(|&&(open, _)| open == opening) {
-                        if close == ch {
-                            stack.pop(); // 匹配成功，弹出栈顶元素
-                        } else {
-                            return false; // 不匹配
-                        }
-                    }
-                } else {
-                    return false; // 栈为空，没有匹配的开括号
-                }
+        // 将非空队列中的元素（除了最后一个）转移到另一个队列
+        while src.size() > 1 {
+            if let Ok(val) = src.dequeue() {
+                dst.enqueue(val);
             }
-            _ => continue, // 忽略其他字符
         }
+
+        // 返回最后一个元素
+        src.dequeue()
     }
 
-    stack.is_empty() // 栈为空表示所有括号都匹配
+    pub fn is_empty(&self) -> bool {
+        self.q1.is_empty() && self.q2.is_empty()
+    }
 }
 
 #[cfg(test)]
@@ -145,38 +99,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn bracket_matching_1() {
-        let s = "(2+3){func}[abc]";
-        assert_eq!(bracket_match(s), true);
-    }
-
-    #[test]
-    fn bracket_matching_2() {
-        let s = "(2+3)*(3-1";
-        assert_eq!(bracket_match(s), false);
-    }
-
-    #[test]
-    fn bracket_matching_3() {
-        let s = "{{([])}}";
-        assert_eq!(bracket_match(s), true);
-    }
-
-    #[test]
-    fn bracket_matching_4() {
-        let s = "{{(}[)]}";
-        assert_eq!(bracket_match(s), false);
-    }
-
-    #[test]
-    fn bracket_matching_5() {
-        let s = "[[[]]]]]]]]]";
-        assert_eq!(bracket_match(s), false);
-    }
-
-    #[test]
-    fn bracket_matching_6() {
-        let s = "";
-        assert_eq!(bracket_match(s), true);
+    fn test_stack() {
+        let mut s = MyStack::new();
+        assert_eq!(s.pop(), Err("Stack is empty"));
+        s.push(1);
+        s.push(2);
+        s.push(3);
+        assert_eq!(s.pop(), Ok(3));
+        assert_eq!(s.pop(), Ok(2));
+        s.push(4);
+        s.push(5);
+        assert_eq!(s.is_empty(), false);
+        assert_eq!(s.pop(), Ok(5));
+        assert_eq!(s.pop(), Ok(4));
+        assert_eq!(s.pop(), Ok(1));
+        assert_eq!(s.pop(), Err("Stack is empty"));
+        assert_eq!(s.is_empty(), true);
     }
 }
